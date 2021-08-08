@@ -1,0 +1,9 @@
+{
+    "mysql" : {
+        "server": "",
+        "user" : "",
+        "password" : "",
+        "database" : "",
+        "port" : ""
+    }
+}
