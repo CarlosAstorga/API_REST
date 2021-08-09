@@ -61,4 +61,20 @@ class Connection
 
         return $this->toUTF8($array_results);
     }
+
+    public function execute($query)
+    {
+        $this->connection->query($query);
+        return !empty($this->connection->affected_rows) ? true : false;
+    }
+
+    public function getLastId()
+    {
+        return $this->connection->insert_id;
+    }
+
+    protected function encrypt($string)
+    {
+        return md5($string);
+    }
 }
