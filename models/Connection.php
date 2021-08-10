@@ -65,7 +65,7 @@ class Connection
     public function execute($query)
     {
         $this->connection->query($query);
-        return !empty($this->connection->affected_rows) ? true : false;
+        return $this->connection->affected_rows > 0;
     }
 
     public function getLastId()
@@ -76,5 +76,18 @@ class Connection
     protected function encrypt($string)
     {
         return md5($string);
+    }
+
+    public function find($id)
+    {
+        $query = "SELECT * FROM " . $this->table . " WHERE id = $id";
+        $found = $this->getData($query);
+        return !empty($found) ? (object)$found[0] : null;
+    }
+
+    public function exists($id)
+    {
+        $query = "SELECT * FROM " . $this->table . " WHERE id = $id";
+        return $this->execute($query);
     }
 }
