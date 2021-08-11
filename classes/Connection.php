@@ -7,20 +7,21 @@ class Connection
     private $password;
     private $database;
     private $port;
-    private $connection;
+    protected $connection;
 
     function __construct()
     {
         $data = $this->getConnectionData();
-        foreach ($data as $key => $value) {
-            $this->server = $value['server'];
-            $this->user = $value['user'];
+        foreach ($data as $value) {
+            $this->server   = $value['server'];
+            $this->user     = $value['user'];
             $this->password = $value['password'];
             $this->database = $value['database'];
-            $this->port = $value['port'];
+            $this->port     = $value['port'];
         }
 
-        $this->connection = new mysqli($this->server, $this->user, $this->password, $this->database, $this->port);
+        $this->connection   = new mysqli($this->server, $this->user, $this->password, $this->database, $this->port);
+        $this->connection->set_charset("utf8mb4");
         if ($this->connection->connect_error) {
             die('Connection error: ' . $this->connection->connect_error);
         }
@@ -34,6 +35,7 @@ class Connection
             if (!file_exists($config_file_path)) {
                 throw new Exception("Configuration file not found.");
             }
+
             return json_decode(file_get_contents($config_file_path), true);
         } catch (Exception $e) {
             die($e->getMessage());
@@ -42,7 +44,7 @@ class Connection
 
     private function toUTF8($array)
     {
-        array_walk_recursive($array, function (&$item, $key) {
+        array_walk_recursive($array, function (&$item) {
             if (!mb_detect_encoding($item, 'utf-8', true)) {
                 $item = utf8_encode($item);
             }
@@ -53,8 +55,8 @@ class Connection
 
     public function getData($query)
     {
-        $results = $this->connection->query($query);
-        $array_results = [];
+        $results        = $this->connection->query($query);
+        $array_results  = [];
         foreach ($results as $key) {
             $array_results[] = $key;
         }

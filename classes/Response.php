@@ -11,9 +11,16 @@ class Response
     static function json(int $code, string $message = "", $data = [])
     {
         self::setStatusCode($code);
-        $arr['status_code'] = $code;
-        if (!empty($message)) $arr['message'] = $message;
-        if (!empty($data)) $arr['results'] = $data;
+        $arr['Response'] = $code == 200 ? "True" : "False";
+
+        if (!empty($message)) {
+            $code == 200 ? $arr['Message'] = $message : $arr['Error'] = $message;
+        }
+
+        if (!empty($data)) {
+            $arr = array_merge($arr, $data);
+        }
+
         return json_encode($arr);
     }
 }
