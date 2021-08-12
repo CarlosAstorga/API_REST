@@ -10,17 +10,21 @@ class Movie extends Connection
     {
         parent::__construct();
         $data           = json_decode($input);
+        $this->Dir      = dirname(__DIR__) . "\public\images\\";
         $this->Token    = $data->Token  ?? '';
         $this->id       = $data->id     ?? '';
         $this->Title    = $data->Title  ?? '';
         $this->Year     = $data->Year   ?? '';
         $this->imdbID   = $data->imdbID ?? '';
-        $this->Poster   = $data->Poster ?? '';
+        $this->Poster   = '';
         $this->Type     = $data->Type   ?? '';
+        $this->Image    = $data->Poster ?? '';
+        $this->Path     = $this->id ? $this->Dir . "$this->id" . "\\" : $this->Dir;
     }
 
     public function list($data)
     {
+        $this->Token    = $data['apikey'];
         if (!$this->Token)                  return Response::json(401, "Token Required");
         if (empty($this->getToken()))       return Response::json(401, "Invalid Token");
 
@@ -67,6 +71,13 @@ class Movie extends Connection
         $movieId = $this->connection->insert_id;
         if ($movieId) {
             $stmt->close();
+            if ($this->Image) {
+                $this->id = $movieId;
+                $this->Path = $this->Dir . "$this->id" . "\\";
+                $this->savePoster();
+                if ($this->Poster)
+                    $this->connection->query("UPDATE $this->table SET Poster = '$this->Poster' WHERE id = $this->id");
+            }
             return Response::json(200, 'Movie created successfully', ['id' => $movieId]);
         } else {
             return Response::json(500);
@@ -81,6 +92,10 @@ class Movie extends Connection
         if (!parent::exists($this->id))  return Response::json(404, 'Movie not found!');
 
         $data       = json_decode($request, true);
+        if ($data['Poster']) {
+            $this->savePoster();
+            $data['Poster'] = $this->Poster;
+        }
         unset($data['id'], $data['Token']);
 
         $query      = "UPDATE " . $this->table . " SET";
@@ -117,6 +132,7 @@ class Movie extends Connection
 
         if ($result > 0) {
             $stmt->close();
+            $this->removeDirectory();
             return Response::json(200, 'Movie deleted successfully');
         } else {
             return Response::json(500);
@@ -136,5 +152,39 @@ class Movie extends Connection
         $stmt->bind_param('si', $this->Token, $active);
         $stmt->execute();
         return $stmt->get_result()->num_rows;
+    }
+
+    private function savePoster()
+    {
+        $split          = explode(";base64,", $this->Image);
+        if (!isset($split[1]))  return;
+        $mime           = mime_content_type($this->Image);
+        if (!$mime)             return;
+        $type           = explode('/', $mime)[1];
+        $base_64        = base64_decode($split[1]);
+        $file           = $this->Path . uniqid() . "." . $type;
+
+        file_exists($this->Path) ? $this->removeFiles() : $this->createDirectoryIfNotExists();
+
+        file_put_contents($file, $base_64);
+        $this->Poster   = str_replace('\\',  '/', $file);
+    }
+
+    private function removeDirectory()
+    {
+        if (file_exists($this->Path)) {
+            $this->removeFiles();
+            rmdir($this->Path);
+        }
+    }
+
+    private function removeFiles()
+    {
+        array_map('unlink', glob("$this->Path/*"));
+    }
+
+    private function createDirectoryIfNotExists()
+    {
+        if (!file_exists($this->Path)) mkdir($this->Path, 0777);
     }
 }
