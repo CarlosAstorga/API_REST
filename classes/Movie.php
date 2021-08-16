@@ -139,9 +139,36 @@ class Movie extends Connection
         }
     }
 
-    public function getMovie($id)
+    public function getMovieById($id)
     {
-        return parent::find($id);
+        $query  = "SELECT * FROM $this->table WHERE imdbID = ?";
+        $stmt   = $this->connection->prepare($query);
+        $stmt->bind_param('s', $id);
+        $stmt->execute();
+
+        $result = $stmt->get_result()->fetch_assoc();
+        if (!$result) return Response::json(404, "Movie not found!");
+        $stmt->close();
+        return Response::json(200, '', $result);
+    }
+
+    public function getMovieByTitle($data)
+    {
+        $Title          = $data['t']    ?? null;
+        $Type           = $data['type'] ?? null;
+        $Year           = $data['y']    ?? null;
+
+        $filters        = "";
+        $query          = "SELECT       * FROM $this->table";
+
+        if ($Title)     $filters        = $filters . " WHERE Title LIKE '%$Title%'";
+        if ($Type)      $filters        = $filters . " AND Type = '$Type'";
+        if ($Year)      $filters        = $filters . " AND Year = '$Year'";
+
+        $query          = "$query $filters limit 1";
+        $result         = parent::getData($query);
+
+        return $result  ? Response::json(200, '', $result[0])   : Response::json(200, 'Movie not found!');
     }
 
     public function getToken()

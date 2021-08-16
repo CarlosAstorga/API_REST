@@ -10,16 +10,21 @@ $_movies    = new Movie($body);
 header('Content-Type: application/json');
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
-        $id         =   $_GET['id']     ?? null;
-        $title      =   $_GET['s']      ?? null;
-        $apikey     =   $_GET['apikey'] ?? null;
+        $imdbID     =   $_GET['i']          ?? null;
+        $search     =   $_GET['s']          ?? null;
+        $apikey     =   $_GET['apikey']     ?? null;
+        $title      =   $_GET['t']          ?? null;
 
-        if ($id || $title && !$apikey) {
-            $data = Response::json(401, 'apikey required');
-        } else if ($id) {
-            $data = $_movies->getMovie($id);
+        if (($imdbID || $search || $title)  && !$apikey) {
+            $data   = Response::json(401, 'No API key provided.');
+        } else if ($imdbID) {
+            $data   = $_movies->getMovieById($imdbID);
+        } else if ($search) {
+            $data   = $_movies->list($_GET);
         } else if ($title) {
-            $data = $_movies->list($_GET);
+            $data   = $_movies->getMovieByTitle($_GET);
+        } else {
+            $data   = Response::json(401, 'Incorrect IMDb ID.');
         }
 
         break;
