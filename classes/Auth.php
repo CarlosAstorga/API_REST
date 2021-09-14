@@ -1,15 +1,21 @@
 <?php
 require_once 'Connection.php';
 require_once 'Response.php';
+require_once 'Validation.php';
+date_default_timezone_set('America/Mexico_City');
 
 class Auth extends Connection
 {
+    protected $table = 'users';
+
     public function __construct($input)
     {
         parent::__construct();
         $data                       = json_decode($input);
-        $this->User                 = $data->User       ?? '';
-        $this->Password             = $data->Password   ?? '';
+        $this->Name                 = !empty($data->Name)               ? validate($data->Name)             : '';
+        $this->User                 = !empty($data->User)               ? validate($data->User)             : '';
+        $this->Password             = !empty($data->Password)           ? validate($data->Password)         : '';
+        $this->confirmPassword      = !empty($data->confirmPassword)    ? validate($data->confirmPassword)  : '';
         $this->loggedUser           = $this->getUser();
     }
 
@@ -27,6 +33,33 @@ class Auth extends Connection
         if (!$token) return Response::json(500);
 
         return Response::json(200, 'Token created successfully', ['Token' => $token]);
+    }
+
+    public function register()
+    {
+        if (!$this->Name)                                       return Response::json(400, 'Name field required');
+        if (!$this->User)                                       return Response::json(400, 'Email field required');
+        if (!filter_var($this->User, FILTER_VALIDATE_EMAIL))    return Response::json(400, 'Invalid email format');
+        if (!$this->Password)                                   return Response::json(400, 'Password field required');
+        if (!$this->confirmPassword)                            return Response::json(400, 'confirmPassword field required');
+        if ($this->Password !== $this->confirmPassword)         return Response::json(400, "The passwords don't match");
+        if ($this->loggedUser)                                  return Response::json(400, 'The user already exists');
+
+        $createdAt = date('Y-m-d H:i');
+        $this->Password = parent::encrypt($this->Password);
+
+        $query  = "INSERT INTO " . $this->table . " (name, email, password, created_at) " . "VALUES (?, ?, ?, ?)";
+        $stmt   = $this->connection->prepare($query);
+        $stmt->bind_param("ssss", $this->Name, $this->User, $this->Password, $createdAt);
+        $stmt->execute();
+
+        $userId = $this->connection->insert_id;
+        if ($userId) {
+            $stmt->close();
+            return Response::json(200, 'User created successfully!', ['id' => $userId]);
+        } else {
+            return Response::json(500);
+        }
     }
 
     private function getUser()
