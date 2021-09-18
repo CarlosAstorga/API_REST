@@ -1,0 +1,9 @@
+{
+    "mysql" : {
+        "server": "sql5.freemysqlhosting.net",
+        "user" : "sql5436661",
+        "password" : "ipV4IBXA39",
+        "database" : "sql5436661",
+        "port" : "3306"
+    }
+} 
