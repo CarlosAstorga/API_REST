@@ -161,14 +161,20 @@ class Movie extends Connection
         $filters        = "";
         $query          = "SELECT       * FROM $this->table";
 
-        if ($Title)     $filters        = $filters . " WHERE Title LIKE '%$Title%'";
+        if ($Title)     $filters        = $filters . " WHERE Title LIKE ?";
         if ($Type)      $filters        = $filters . " AND Type = '$Type'";
         if ($Year)      $filters        = $filters . " AND Year = '$Year'";
 
         $query          = "$query $filters limit 1";
-        $result         = parent::getData($query);
 
-        return $result  ? Response::json(200, '', $result[0])   : Response::json(200, 'Movie not found!');
+        $stmt = $this->connection->prepare($query);
+        $search = "%$Title%";
+        $stmt->bind_param("s", $search);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        if (!$result) return Response::json(404, "Movie not found!");
+        $stmt->close();
+        return Response::json(200, '', $result[0]);
     }
 
     public function getToken()
