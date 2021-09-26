@@ -30,7 +30,7 @@ class Auth extends Connection
         if (!$this->loggedUser->active) return Response::json(403, "The user isn't active");
 
         $token = $this->insertToken($this->loggedUser->id);
-        if (!$token) return Response::json(500);
+        if (!$token) return Response::json(500, 'Could not create token');
 
         return Response::json(200, 'Token created successfully', ['Token' => $token]);
     }
@@ -72,15 +72,19 @@ class Auth extends Connection
 
     private function insertToken($user_id)
     {
-        date_default_timezone_set('America/Mexico_City');
-
         $bool   = true;
         $token  = bin2hex(openssl_random_pseudo_bytes(16, $bool));
         $date   = date('Y-m-d H:i');
         $status = 1;
-        $query  = "INSERT INTO user_token (user_id, token, status, date) VALUES ('$user_id', '$token', '$status', '$date')";
-        $result = parent::execute($query);
+        $query  = "INSERT INTO user_token (user_id, token, status, date) VALUES (?, ? , ? , ?)";
 
-        return $result ? $token : $result;
+        $stmt   = $this->connection->prepare($query);
+        $stmt->bind_param("isis", $user_id, $token, $status, $date);
+        $stmt->execute();
+
+        if ($stmt->affected_rows === 0) return null;
+        $stmt->close();
+
+        return $token;
     }
 }
