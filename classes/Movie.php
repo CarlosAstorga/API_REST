@@ -36,7 +36,7 @@ class Movie extends Connection
         $filters        = "";
         $query          = "SELECT * FROM $this->table";
         $countQuery     = "SELECT COUNT(*) as total FROM $this->table";
-        if ($Title) $filters    = $filters . " WHERE Title LIKE '%$Title%'";
+        if ($Title) $filters    = $filters . " WHERE Title LIKE ?";
         if ($Type)  $filters    = $filters . " AND Type = '$Type'";
         if ($Year)  $filters    = $filters . " AND Year = '$Year'";
 
@@ -48,12 +48,26 @@ class Movie extends Connection
         }
 
         $query      = "$query $filters limit $start, $take";
-        $result     = parent::getData($query);
 
-        return $result ? Response::json(200, '', [
+        $stmt = $this->connection->prepare($query);
+        $search = "%$Title%";
+        $stmt->bind_param("s", $search);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        if (!$result) return Response::json(404, "Movie not found!");
+        $stmt->close();
+
+        $stmtCount = $this->connection->prepare("$countQuery $filters");
+        $stmtCount->bind_param("s", $search);
+        $stmtCount->execute();
+        $resultCount = $stmtCount->get_result()->fetch_all(MYSQLI_ASSOC);
+        if (!$resultCount) return Response::json(404, "Movie not found!");
+        $stmtCount->close();
+
+        return Response::json(200, '', [
             'Search'        => $result,
-            'totalResults'  => parent::getData("$countQuery $filters")[0]['total']
-        ]) : Response::json(200, 'Movie not found!');
+            'totalResults'  => $resultCount[0]['total']
+        ]);
     }
 
     public function create()
