@@ -64,10 +64,15 @@ class Auth extends Connection
 
     private function getUser()
     {
-        $query  = "SELECT * FROM users WHERE email = '$this->User'";
-        $user   = parent::getData($query);
+        $query  = "SELECT * FROM users WHERE email = ?";
+        $stmt   = $this->connection->prepare($query);
+        $stmt->bind_param("s", $this->User);
+        $stmt->execute();
 
-        return isset($user[0]['id']) ? (object)$user[0] : null;
+        $result = $stmt->get_result();
+        $user   = $result->fetch_object();
+        $stmt->close();
+        return $user;
     }
 
     private function insertToken($user_id)
